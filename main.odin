@@ -20,12 +20,19 @@ Cell :: struct {
 make_cell :: proc (values: [12][12]u8) -> Cell {
 	tiles: [12][12]Tile
 
-	for i in 0..<12 {
-		for j in 0..<12 {
+	for j in 0..<11 {
+		for i in 0..<11 {
 			tiles[j][i].value = TileValue(values[j][i])
 			tiles[j][i].relative_position = [2]i8{i8(i),i8(j)}
 		}
 	}
+
+	//for j in 0..<11 {
+	//	for i in 0..<11 {
+	//		tile := tiles[j][i]
+	//		//fmt.printfln("[%v,%v] {\nRelative_Position: %v\nValue: %v\n}", j,i,tile.relative_position, tile.value)
+	//	}
+	// }
 	return Cell {tiles = tiles}
 }
 
@@ -70,7 +77,7 @@ tile_make_iter_ray :: proc(cell: Cell, origin: [2]i8, direction: Direction) -> T
 			origin_column := origin.x
 			origin_start := origin.y
 			i := origin_start
-			for i < 12 {
+			for i < 11 {
 				sa.append(&tiles, cell.tiles[i][origin_column])
 				i += 1
 			}
@@ -78,7 +85,7 @@ tile_make_iter_ray :: proc(cell: Cell, origin: [2]i8, direction: Direction) -> T
 			origin_row := origin.y
 			origin_start := origin.x
 			i := origin_start
-			for i < 12 {
+			for i < 11 {
 				sa.append(&tiles, cell.tiles[origin_row][i])
 				i += 1
 			}
@@ -128,19 +135,41 @@ iter_tiles_until :: proc(iter: ^TileIter, value: TileValue) -> (val: Tile, cond:
 	length := sa.len(iter.tiles)
 
 	in_range := iter.index < length - 1
-
-	for in_range {
-		for sa.get(iter.tiles, iter.index).value != value {
+	iter_count := 0
+	for in_range && iter_count != length {
+		tile := sa.get(iter.tiles, iter.index)
+		fmt.printfln("Index: %v\n Value: %v\nPosition: %v", iter.index, tile.value, tile.relative_position)
+		if tile.value != value {
 			iter.index += 1
+			iter_count += 1
+		} else {
+			val = tile
+			cond = true
+			break
 		}
-		val = sa.get(iter.tiles, iter.index)
-		cond = true
+	}
+	return
+}
+
+iter_tiles_until_not :: proc(iter: ^TileIter, value: TileValue) -> (val: Tile, cond: bool) {
+	length := sa.len(iter.tiles)
+
+	in_range := iter.index < length - 1
+	iter_count := 0
+	for in_range && iter_count != length {
+		tile := sa.get(iter.tiles, iter.index)
+		fmt.printfln("Index: %v\n Value: %v\nPosition: %v", iter.index, tile.value, tile.relative_position)
+		if tile.value != value {
+			iter.index += 1
+			iter_count += 1
+		} else {
+			val = tile
+			cond = true
+			break
+		}
 	}
 	return
 }
 
 main :: proc() {
-	fmt.printfln("Room: %v", size_of(Room))
-	fmt.printfln("Cell: %v", (size_of(Cell) * 144) / 1000)
-	fmt.printfln("Tile: %v", size_of(Tile))
 }

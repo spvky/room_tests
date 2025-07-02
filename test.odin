@@ -24,11 +24,13 @@ test_grid_iter :: proc(t: ^testing.T) {
 
 	fmt.println("Finished building Cell")
 
-	iter := tile_make_iter_ray(cell,{6,1},.South)
+	iter := tile_make_iter_ray(cell,{5,1},.South)
 	fmt.println("Finished building Iter")
 	val, cond := iter_tiles_until(&iter, .Wall)
+	fmt.printfln("CONDITION: %v", cond)
+	fmt.printfln("RELATIVE_POSITION: %v", val.relative_position)
 
-	testing.expect(t, val.relative_position == [2]i8{6,8})
+	testing.expect(t, val.relative_position == [2]i8{5,8})
 	
 }
 
