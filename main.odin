@@ -193,12 +193,8 @@ WaterEndpoint :: struct {
 water_bake :: proc(cell: Cell, origin: [2]i8) {
 	still_baking: bool
 	end_points := make([dynamic]WaterEndpoint, 8, allocator = context.temp_allocator)
-	paths_to_execute := make([dynamic]WaterPath, 8, allocator = context.temp_allocator)
+	paths_to_execute: [dynamic]WaterPath
 
-	// current_iter := tile_make_iter_ray(cell, current_origin, .South)
-	// if val, valid := iter_tiles_until(&current_iter, .Exit); valid {
-		
-	// }
 	initial_iter := tile_make_iter_ray(cell, origin, .South)
 	if val, valid := iter_tiles_until(&initial_iter, .Wall, .Exit); valid {
 		#partial switch val.value {
@@ -213,9 +209,11 @@ water_bake :: proc(cell: Cell, origin: [2]i8) {
 					direction = .East,
 					condition = .UntilNot
 				}
+				paths_to_execute = make([dynamic]WaterPath, 8, allocator = context.temp_allocator)
 				append_elems(&paths_to_execute,left_path, right_path)
 			case .Exit:
 				append(&end_points, WaterEndpoint {position = val.relative_position, value = val.value})
+				still_baking = false
 		}
 	}
 	for still_baking {
