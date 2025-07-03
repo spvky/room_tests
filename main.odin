@@ -26,13 +26,6 @@ make_cell :: proc (values: [12][12]u8) -> Cell {
 			tiles[j][i].relative_position = [2]i8{i8(i),i8(j)}
 		}
 	}
-
-	//for j in 0..<11 {
-	//	for i in 0..<11 {
-	//		tile := tiles[j][i]
-	//		//fmt.printfln("[%v,%v] {\nRelative_Position: %v\nValue: %v\n}", j,i,tile.relative_position, tile.value)
-	//	}
-	// }
 	return Cell {tiles = tiles}
 }
 
@@ -62,6 +55,7 @@ TileIter :: struct {
 	index: int,
 }
 
+// Create an iterator for a cell, pointing in a direction from a starting point
 tile_make_iter_ray :: proc(cell: Cell, origin: [2]i8, direction: Direction) -> TileIter {
 	tiles: sa.Small_Array(12, Tile)
 	switch direction {
@@ -131,26 +125,28 @@ iter_tiles_ptr :: proc(iter: ^TileIter) -> (val: ^Tile, cond: bool) {
 	return
 }
 
-iter_tiles_until :: proc(iter: ^TileIter, value: TileValue) -> (val: Tile, cond: bool) {
+// Consumes an iterator, moving along the tiles until we find one with the given value
+iter_tiles_until :: proc(iter: ^TileIter, values: ..TileValue) -> (val: Tile, cond: bool) {
 	length := sa.len(iter.tiles)
 
 	in_range := iter.index < length - 1
 	iter_count := 0
-	for in_range && iter_count != length {
+	outer: for in_range && iter_count != length {
 		tile := sa.get(iter.tiles, iter.index)
-		fmt.printfln("Index: %v\n Value: %v\nPosition: %v", iter.index, tile.value, tile.relative_position)
-		if tile.value != value {
-			iter.index += 1
-			iter_count += 1
-		} else {
-			val = tile
-			cond = true
-			break
+		for v in values {
+			if tile.value == v {
+				val = tile
+				cond = true
+				break outer
+			}
 		}
+		iter.index += 1
+		iter_count += 1
 	}
 	return
 }
 
+// Consumes an iterator, moving along the tiles until we find one that DOES not have the given value
 iter_tiles_until_not :: proc(iter: ^TileIter, value: TileValue) -> (val: Tile, cond: bool) {
 	length := sa.len(iter.tiles)
 
@@ -158,8 +154,7 @@ iter_tiles_until_not :: proc(iter: ^TileIter, value: TileValue) -> (val: Tile, c
 	iter_count := 0
 	for in_range && iter_count != length {
 		tile := sa.get(iter.tiles, iter.index)
-		fmt.printfln("Index: %v\n Value: %v\nPosition: %v", iter.index, tile.value, tile.relative_position)
-		if tile.value != value {
+		if tile.value == value {
 			iter.index += 1
 			iter_count += 1
 		} else {
@@ -172,4 +167,75 @@ iter_tiles_until_not :: proc(iter: ^TileIter, value: TileValue) -> (val: Tile, c
 }
 
 main :: proc() {
+}
+
+WaterBakeResults :: struct {
+	
+}
+
+
+WaterCondition :: enum {
+	Until,
+	UntilNot
+}
+
+WaterPath :: struct {
+	origin: [2]i8,
+	direction: Direction,
+	condition: WaterCondition,
+}
+
+WaterEndpoint :: struct {
+	position: [2]i8,
+	value: TileValue
+}
+
+water_bake :: proc(cell: Cell, origin: [2]i8) {
+	still_baking: bool
+	end_points := make([dynamic]WaterEndpoint, 8, allocator = context.temp_allocator)
+	paths_to_execute := make([dynamic]WaterPath, 8, allocator = context.temp_allocator)
+
+	// current_iter := tile_make_iter_ray(cell, current_origin, .South)
+	// if val, valid := iter_tiles_until(&current_iter, .Exit); valid {
+		
+	// }
+	initial_iter := tile_make_iter_ray(cell, origin, .South)
+	if val, valid := iter_tiles_until(&initial_iter, .Wall, .Exit); valid {
+		#partial switch val.value {
+			case .Wall:
+				left_path := WaterPath {
+					origin = val.relative_position,
+					direction = .West,
+					condition = .UntilNot
+				}
+				right_path := WaterPath {
+					origin = val.relative_position,
+					direction = .East,
+					condition = .UntilNot
+				}
+				append_elems(&paths_to_execute,left_path, right_path)
+			case .Exit:
+				append(&end_points, WaterEndpoint {position = val.relative_position, value = val.value})
+		}
+	}
+	for still_baking {
+		for path,i in paths_to_execute {
+			iter := tile_make_iter_ray(cell, path.origin, path.direction)
+			if val, valid := iter_tiles_until(&iter, .Wall, .Exit); valid {
+				#partial switch val.value {
+					case .Wall:
+						if path.direction == .South {
+						}
+					case .Exit:
+						append(&end_points, WaterEndpoint {position = val.relative_position, value = val.value})
+				}
+			}
+		}
+		if len(paths_to_execute) == 0 {
+			// We have explored all possible paths and we can terminate
+		}
+	}
+
+
+
 }
