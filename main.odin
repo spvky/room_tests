@@ -1,6 +1,7 @@
 package main
 
 import "core:fmt"
+import "core:time"
 import sa "core:container/small_array"
 
 Vec2 :: [2]f32
@@ -20,8 +21,8 @@ Cell :: struct {
 make_cell :: proc (values: [12][12]u8) -> Cell {
 	tiles: [12][12]Tile
 
-	for j in 0..<11 {
-		for i in 0..<11 {
+	for j in 0..<12 {
+		for i in 0..<12 {
 			tiles[j][i].value = TileValue(values[j][i])
 			tiles[j][i].relative_position = [2]i8{i8(i),i8(j)}
 		}
@@ -29,7 +30,7 @@ make_cell :: proc (values: [12][12]u8) -> Cell {
 	return Cell {tiles = tiles}
 }
 
-Direction ::enum {
+Direction :: enum {
 	North,
 	South,
 	East,
@@ -55,6 +56,7 @@ TileIter :: struct {
 	index: int,
 }
 
+
 // Create an iterator for a cell, pointing in a direction from a starting point
 tile_make_iter_ray :: proc(cell: Cell, origin: [2]i8, direction: Direction) -> TileIter {
 	tiles: sa.Small_Array(12, Tile)
@@ -64,23 +66,26 @@ tile_make_iter_ray :: proc(cell: Cell, origin: [2]i8, direction: Direction) -> T
 			origin_start := origin.y
 			i := origin_start
 			for i >= 0 {
-				sa.append(&tiles, cell.tiles[i][origin_column])
+				tile := cell.tiles[i][origin_column]
+				sa.append(&tiles, tile)
 				i -= 1
 			}
 		case .South:
 			origin_column := origin.x
 			origin_start := origin.y
 			i := origin_start
-			for i < 11 {
-				sa.append(&tiles, cell.tiles[i][origin_column])
+			for i < 12 {
+				tile := cell.tiles[i][origin_column]
+				sa.append(&tiles, tile)
 				i += 1
 			}
 		case .East:
 			origin_row := origin.y
 			origin_start := origin.x
 			i := origin_start
-			for i < 11 {
-				sa.append(&tiles, cell.tiles[origin_row][i])
+			for i < 12 {
+				tile := cell.tiles[origin_row][i]
+				sa.append(&tiles, tile)
 				i += 1
 			}
 		case .West:
@@ -88,7 +93,8 @@ tile_make_iter_ray :: proc(cell: Cell, origin: [2]i8, direction: Direction) -> T
 			origin_start := origin.x
 			i := origin_start
 			for i >= 0 {
-				sa.append(&tiles, cell.tiles[origin_row][i])
+				tile := cell.tiles[origin_row][i]
+				sa.append(&tiles, tile)
 				i -= 1
 			}
 	}
@@ -101,9 +107,7 @@ tile_make_iter :: proc(tiles: sa.Small_Array(12, Tile)) -> TileIter {
 
 iter_tiles :: proc(iter: ^TileIter) -> (val: Tile, cond: bool) {
 	length := sa.len(iter.tiles)
-
-	in_range := iter.index < length - 1
-
+	in_range := iter.index < length
 	for in_range {
 		val,cond = sa.get_safe(iter.tiles,iter.index)
 		iter.index += 1
@@ -112,65 +116,87 @@ iter_tiles :: proc(iter: ^TileIter) -> (val: Tile, cond: bool) {
 	return
 }
 
-iter_tiles_ptr :: proc(iter: ^TileIter) -> (val: ^Tile, cond: bool) {
-	length := sa.len(iter.tiles)
 
-	in_range := iter.index < length - 1
+
+FatTile :: struct {
+	top: Tile,
+	bottom: Tile
+}
+
+FatTileIter :: struct {
+	fat_tiles: sa.Small_Array(12, FatTile),
+	index: int
+}
+
+fat_tile_make_iter_ray :: proc(cell: Cell, origin: [2]i8, direction: Direction) -> FatTileIter {
+	// Fat tile iters cannot be created on the top row, and they cannot travel vertically
+	assert(origin.y > 0 && (direction == .West || direction == .East))
+	fat_tiles: sa.Small_Array(12, FatTile)
+	#partial switch direction {
+		case .East:
+			origin_row := origin.y
+			origin_start := origin.x
+			i := origin_start
+			for i < 12 {
+				fat_tile := FatTile {
+					top = cell.tiles[origin_row - 1][i],
+					bottom = cell.tiles[origin_row][i]
+				}
+				sa.append(&fat_tiles, fat_tile)
+				i += 1
+			}
+		case .West:
+			origin_row := origin.y
+			origin_start := origin.x
+			i := origin_start
+			for i >= 0 {
+				fat_tile := FatTile {
+					top = cell.tiles[origin_row - 1][i],
+					bottom = cell.tiles[origin_row][i]
+				}
+				sa.append(&fat_tiles, fat_tile)
+				i -= 1
+			}
+	}
+	return FatTileIter {fat_tiles = fat_tiles}
+}
+
+iter_fat_tiles :: proc(iter: ^FatTileIter) -> (val: FatTile, cond: bool) {
+	length := sa.len(iter.fat_tiles)
+
+	in_range := iter.index < length
 
 	for in_range {
-		val,cond = sa.get_ptr_safe(&iter.tiles,iter.index)
+		val, cond = sa.get_safe(iter.fat_tiles, iter.index)
 		iter.index += 1
 		return
 	}
 	return
 }
 
-// Consumes an iterator, moving along the tiles until we find one with the given value
-iter_tiles_until :: proc(iter: ^TileIter, values: ..TileValue) -> (val: Tile, cond: bool) {
-	length := sa.len(iter.tiles)
-
-	in_range := iter.index < length - 1
-	iter_count := 0
-	outer: for in_range && iter_count != length {
-		tile := sa.get(iter.tiles, iter.index)
-		for v in values {
-			if tile.value == v {
-				val = tile
-				cond = true
-				break outer
-			}
-		}
-		iter.index += 1
-		iter_count += 1
-	}
-	return
-}
-
-// Consumes an iterator, moving along the tiles until we find one that DOES not have the given value
-iter_tiles_until_not :: proc(iter: ^TileIter, value: TileValue) -> (val: Tile, cond: bool) {
-	length := sa.len(iter.tiles)
-
-	in_range := iter.index < length - 1
-	iter_count := 0
-	for in_range && iter_count != length {
-		tile := sa.get(iter.tiles, iter.index)
-		if tile.value == value {
-			iter.index += 1
-			iter_count += 1
-		} else {
-			val = tile
-			cond = true
-			break
-		}
-	}
-	return
-}
-
 main :: proc() {
-}
-
-WaterBakeResults :: struct {
+	cell := make_cell([12][12]u8{
+			{0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0},
+			{0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0},
+			{0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0},
+			{0,	0,	0,	0,	1,	1,	1,	1,	0,	0,	0,	0},
+			{0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0},
+			{0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0},
+			{0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0},
+			{1,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	1},
+			{1,	0,	0,	1,	1,	1,	1,	0,	0,	0,	0,	1},
+			{1,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	1},
+			{1,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	1},
+			{1,	1,	1,	1,	1,	1,	1,	1,	0,	1,	1,	1},
+	})
 	
+	terminus := water_bake(cell,{5,1})
+	length := len(terminus)
+	fmt.printfln("Terminus Length: %v", length)
+	for k,v in terminus {
+		fmt.printfln("Position: %v", k)
+		fmt.printfln("Value: %v", v)
+	}
 }
 
 
@@ -182,7 +208,7 @@ WaterCondition :: enum {
 WaterPath :: struct {
 	origin: [2]i8,
 	direction: Direction,
-	condition: WaterCondition,
+	should_skip: bool
 }
 
 WaterEndpoint :: struct {
@@ -190,50 +216,142 @@ WaterEndpoint :: struct {
 	value: TileValue
 }
 
-water_bake :: proc(cell: Cell, origin: [2]i8) {
-	still_baking: bool
-	end_points := make([dynamic]WaterEndpoint, 8, allocator = context.temp_allocator)
+water_bake :: proc(cell: Cell, origin: [2]i8) -> map[[2]i8]TileValue {// [dynamic]WaterEndpoint {
+	start := time.now()
+	still_baking := true
+	end_points := make(map[[2]i8]TileValue, 8, allocator = context.temp_allocator)
 	paths_to_execute: [dynamic]WaterPath
+	skips: int
+	iter_count: int
 
 	initial_iter := tile_make_iter_ray(cell, origin, .South)
-	if val, valid := iter_tiles_until(&initial_iter, .Wall, .Exit); valid {
-		#partial switch val.value {
+	initial_loop: for tile in iter_tiles(&initial_iter) {
+		#partial switch tile.value {
+			case .Empty:
+				continue
 			case .Wall:
 				left_path := WaterPath {
-					origin = val.relative_position,
+					origin = tile.relative_position,
 					direction = .West,
-					condition = .UntilNot
 				}
 				right_path := WaterPath {
-					origin = val.relative_position,
+					origin = tile.relative_position,
 					direction = .East,
-					condition = .UntilNot
 				}
-				paths_to_execute = make([dynamic]WaterPath, 8, allocator = context.temp_allocator)
+				paths_to_execute = make([dynamic]WaterPath, 0, 8, allocator = context.temp_allocator)
 				append_elems(&paths_to_execute,left_path, right_path)
+				break initial_loop
 			case .Exit:
-				append(&end_points, WaterEndpoint {position = val.relative_position, value = val.value})
+				end_points[tile.relative_position] = tile.value
 				still_baking = false
+				break initial_loop
 		}
 	}
-	for still_baking {
-		for path,i in paths_to_execute {
-			iter := tile_make_iter_ray(cell, path.origin, path.direction)
-			if val, valid := iter_tiles_until(&iter, .Wall, .Exit); valid {
-				#partial switch val.value {
-					case .Wall:
-						if path.direction == .South {
-						}
-					case .Exit:
-						append(&end_points, WaterEndpoint {position = val.relative_position, value = val.value})
+	baking_loop: for still_baking {
+		length := len(paths_to_execute)
+		paths_loop: for &path,i in paths_to_execute {
+			if path.should_skip {
+				paths_length := len(paths_to_execute)
+				if skips ==  paths_length{
+					still_baking = false
+					break paths_loop
 				}
+				continue paths_loop
 			}
+			#partial switch path.direction {
+				case .West:
+					iter := fat_tile_make_iter_ray(cell,path.origin, path.direction)
+					if sa.len(iter.fat_tiles) == 10 {
+					}
+					west_fat_loop: for ft in iter_fat_tiles(&iter) {
+						top := ft.top
+						bot := ft.bottom
+						switch true {
+							case bot.value == .Empty && top.value == .Empty:
+								path.should_skip = true
+								skips += 1
+								append(&paths_to_execute, WaterPath {
+									origin = top.relative_position,
+									direction = .South,
+								})
+								continue paths_loop
+							case bot.value == .Wall && top.value == .Empty:
+							case bot.value == .Wall && top.value == .Wall:
+				end_points[bot.relative_position] = bot.value
+								path.should_skip = true
+								skips += 1
+								continue paths_loop
+						}
+					}
+				case .East:
+					iter := fat_tile_make_iter_ray(cell,path.origin, path.direction)
+					if sa.len(iter.fat_tiles) == 10 {
+					}
+					east_fat_loop: for ft in iter_fat_tiles(&iter) {
+						top := ft.top
+						bot := ft.bottom
+						switch true {
+							case bot.value == .Empty && top.value == .Empty:
+								path.should_skip = true
+								skips += 1
+								append(&paths_to_execute, WaterPath {
+									origin = top.relative_position,
+									direction = .South,
+								})
+								continue paths_loop
+							case bot.value == .Wall && top.value == .Empty:
+							case bot.value == .Wall && top.value == .Wall:
+				end_points[bot.relative_position] = bot.value
+								path.should_skip = true
+								skips += 1
+								continue paths_loop
+						}
+					}
+				case .South:
+					iter := tile_make_iter_ray(cell,path.origin, .South)
+					thin_loop: for tile in  iter_tiles(&iter) {
+						#partial switch tile.value {
+							case .Empty:
+								end_of_cell := tile.relative_position.y == 11
+								if end_of_cell {
+									path.should_skip = true
+									skips += 1
+				end_points[tile.relative_position] = tile.value
+									break thin_loop
+								} else {
+								}
+							case .Wall:
+								left_path := WaterPath {
+									origin = tile.relative_position,
+									direction = .West,
+								}
+								right_path := WaterPath {
+									origin = tile.relative_position,
+									direction = .East,
+								}
+								path.should_skip = true
+								skips += 1
+								append_elems(&paths_to_execute,left_path, right_path)
+								break thin_loop
+							case .Exit:
+								path.should_skip = true
+				end_points[tile.relative_position] = tile.value
+								break thin_loop
+						}
+					}
+			}
+			// // unordered_remove(&paths_to_execute,i)
+			// path.should_skip = true
+			// skips += 1
 		}
-		if len(paths_to_execute) == 0 {
-			// We have explored all possible paths and we can terminate
-		}
+		// if len(paths_to_execute) == skips {
+		// 	// We have explored all possible paths and we can terminate
+		// 	still_baking = false
+		// 	break baking_loop
+		// }
 	}
-
-
-
+	end := time.now()
+	diff := time.diff(start, end)
+	fmt.printfln("TIME === %v", time.duration_milliseconds(diff))
+	return end_points
 }
