@@ -14,6 +14,26 @@ WaterEndpoint :: struct {
 	value: TileValue
 }
 
+WaterBoundaryPair :: struct {
+	endpoints: [2]WaterEndpoint,
+	initialized: bool
+}
+
+// water_volumes_from_end_points_pairs :: proc(cell: Cell, endpoints: [dynamic]WaterEndpoint) {
+// 	pairs: [dynamic]WaterBoundaryPair
+
+// 	open_pair: WaterBoundaryPair
+
+// 	for we in endpoints {
+// 		if !open_pair.initialized {
+// 			open_pair.endpoints[0] = we
+// 			open_pair.initialized = true
+// 		} else {
+// 			if we.position.y == 
+// 		}
+// 	}
+// }
+
 water_bake :: proc(cell: Cell, origin: [2]i8) -> map[[2]i8]TileValue {// [dynamic]WaterEndpoint {
 	still_baking := true
 	end_points := make(map[[2]i8]TileValue, 8, allocator = context.temp_allocator)
