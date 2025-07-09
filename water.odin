@@ -19,6 +19,11 @@ Water_Boundary_Pair :: struct {
 	initialized: bool
 }
 
+// To determine water height:
+	// -- Find wall endpoints with the same y value
+	// -- For each pair, look upwards until limit/one side finds a non solid tile, endpoint to height is submerged
+	// -- Boxes float to match height of water
+
 // water_volumes_from_end_points_pairs :: proc(cell: Cell, endpoints: [dynamic]WaterEndpoint) {
 // 	pairs: [dynamic]WaterBoundaryPair
 
