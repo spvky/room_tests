@@ -5,24 +5,13 @@ import sa "core:container/small_array"
 
 Room :: struct {
 	cell_origin: [2]i16,
-	tag: RoomTag,
+	tag: Room_Tag,
 	cells: sa.Small_Array(20,Cell)
 }
 
-MapRoom :: struct {
-	relative_position: [2]i8,
-	room_ptr: ^Room,
-	rotation: i8
-}
+Room_Tag :: enum { A,B,C,D,E,F }
 
-CursorRoom :: struct {
-	room_ptr: ^Room,
-	rotation: i8
-}
-
-RoomTag :: enum { A,B,C,D,E,F }
-
-draw_cursor_room :: proc(room: CursorRoom, mouse_pos: [2]f32) {
+draw_cursor_room :: proc(room: Cursor_Room, mouse_pos: [2]f32) {
 	iter := cell_make_iter(room.room_ptr.cells)
 	for cell in iter_cells(&iter) {
 		origin: [2]f32

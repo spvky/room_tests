@@ -4,10 +4,10 @@ import sa "core:container/small_array"
 
 Tile :: struct {
 	relative_position: [2]i8,
-	value: TileValue
+	value: Tile_Value
 }
 
-TileValue :: enum {
+Tile_Value :: enum {
 	Empty,
 	Wall,
 	Exit,
@@ -16,14 +16,14 @@ TileValue :: enum {
 	Fan
 }
 
-TileIter :: struct {
+Tile_Iter :: struct {
 	tiles: sa.Small_Array(12, Tile),
 	index: int,
 }
 
 
 // Create an iterator for a cell, pointing in a direction from a starting point
-tile_make_iter_ray :: proc(cell: Cell, origin: [2]i8, direction: Direction) -> TileIter {
+tile_make_iter_ray :: proc(cell: Cell, origin: [2]i8, direction: Direction) -> Tile_Iter {
 	tiles: sa.Small_Array(12, Tile)
 	switch direction {
 		case .North:
@@ -63,14 +63,14 @@ tile_make_iter_ray :: proc(cell: Cell, origin: [2]i8, direction: Direction) -> T
 				i -= 1
 			}
 	}
-	return TileIter {tiles = tiles}
+	return Tile_Iter {tiles = tiles}
 }
 
-tile_make_iter :: proc(tiles: sa.Small_Array(12, Tile)) -> TileIter {
-	return TileIter {tiles = tiles}
+tile_make_iter :: proc(tiles: sa.Small_Array(12, Tile)) -> Tile_Iter {
+	return Tile_Iter {tiles = tiles}
 }
 
-iter_tiles :: proc(iter: ^TileIter) -> (val: Tile, cond: bool) {
+iter_tiles :: proc(iter: ^Tile_Iter) -> (val: Tile, cond: bool) {
 	length := sa.len(iter.tiles)
 	in_range := iter.index < length
 	for in_range {
@@ -83,27 +83,27 @@ iter_tiles :: proc(iter: ^TileIter) -> (val: Tile, cond: bool) {
 
 
 
-FatTile :: struct {
+Fat_Tile :: struct {
 	top: Tile,
 	bottom: Tile
 }
 
-FatTileIter :: struct {
-	fat_tiles: sa.Small_Array(12, FatTile),
+Fat_Tile_Iter :: struct {
+	fat_tiles: sa.Small_Array(12, Fat_Tile),
 	index: int
 }
 
-fat_tile_make_iter_ray :: proc(cell: Cell, origin: [2]i8, direction: Direction) -> FatTileIter {
+fat_tile_make_iter_ray :: proc(cell: Cell, origin: [2]i8, direction: Direction) -> Fat_Tile_Iter {
 	// Fat tile iters cannot be created on the top row, and they cannot travel vertically
 	assert(origin.y > 0 && (direction == .West || direction == .East))
-	fat_tiles: sa.Small_Array(12, FatTile)
+	fat_tiles: sa.Small_Array(12, Fat_Tile)
 	#partial switch direction {
 		case .East:
 			origin_row := origin.y
 			origin_start := origin.x
 			i := origin_start
 			for i < 12 {
-				fat_tile := FatTile {
+				fat_tile := Fat_Tile {
 					top = cell.tiles[origin_row - 1][i],
 					bottom = cell.tiles[origin_row][i]
 				}
@@ -115,7 +115,7 @@ fat_tile_make_iter_ray :: proc(cell: Cell, origin: [2]i8, direction: Direction) 
 			origin_start := origin.x
 			i := origin_start
 			for i >= 0 {
-				fat_tile := FatTile {
+				fat_tile := Fat_Tile {
 					top = cell.tiles[origin_row - 1][i],
 					bottom = cell.tiles[origin_row][i]
 				}
@@ -123,10 +123,10 @@ fat_tile_make_iter_ray :: proc(cell: Cell, origin: [2]i8, direction: Direction) 
 				i -= 1
 			}
 	}
-	return FatTileIter {fat_tiles = fat_tiles}
+	return Fat_Tile_Iter {fat_tiles = fat_tiles}
 }
 
-iter_fat_tiles :: proc(iter: ^FatTileIter) -> (val: FatTile, cond: bool) {
+iter_fat_tiles :: proc(iter: ^Fat_Tile_Iter) -> (val: Fat_Tile, cond: bool) {
 	length := sa.len(iter.fat_tiles)
 
 	in_range := iter.index < length

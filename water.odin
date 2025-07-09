@@ -3,19 +3,19 @@ package main
 import "core:fmt"
 import sa "core:container/small_array"
 
-WaterPath :: struct {
+Water_Path :: struct {
 	origin: [2]i8,
 	direction: Direction,
 	should_skip: bool
 }
 
-WaterEndpoint :: struct {
+Water_Endpoint :: struct {
 	position: [2]i8,
-	value: TileValue
+	value: Tile_Value
 }
 
-WaterBoundaryPair :: struct {
-	endpoints: [2]WaterEndpoint,
+Water_Boundary_Pair :: struct {
+	endpoints: [2]Water_Endpoint,
 	initialized: bool
 }
 
@@ -34,10 +34,10 @@ WaterBoundaryPair :: struct {
 // 	}
 // }
 
-water_bake :: proc(cell: Cell, origin: [2]i8) -> map[[2]i8]TileValue {// [dynamic]WaterEndpoint {
+water_bake :: proc(cell: Cell, origin: [2]i8) -> map[[2]i8]Tile_Value {// [dynamic]WaterEndpoint {
 	still_baking := true
-	end_points := make(map[[2]i8]TileValue, 8, allocator = context.temp_allocator)
-	paths_to_execute: [dynamic]WaterPath
+	end_points := make(map[[2]i8]Tile_Value, 8, allocator = context.temp_allocator)
+	paths_to_execute: [dynamic]Water_Path
 	skips: int
 	iter_count: int
 
@@ -47,15 +47,15 @@ water_bake :: proc(cell: Cell, origin: [2]i8) -> map[[2]i8]TileValue {// [dynami
 			case .Empty:
 				continue
 			case .Wall:
-				left_path := WaterPath {
+				left_path := Water_Path {
 					origin = tile.relative_position,
 					direction = .West,
 				}
-				right_path := WaterPath {
+				right_path := Water_Path {
 					origin = tile.relative_position,
 					direction = .East,
 				}
-				paths_to_execute = make([dynamic]WaterPath, 0, 8, allocator = context.temp_allocator)
+				paths_to_execute = make([dynamic]Water_Path, 0, 8, allocator = context.temp_allocator)
 				append_elems(&paths_to_execute,left_path, right_path)
 				break initial_loop
 			case .Exit:
@@ -87,7 +87,7 @@ water_bake :: proc(cell: Cell, origin: [2]i8) -> map[[2]i8]TileValue {// [dynami
 							case bot.value == .Empty && top.value == .Empty:
 								path.should_skip = true
 								skips += 1
-								append(&paths_to_execute, WaterPath {
+								append(&paths_to_execute, Water_Path {
 									origin = top.relative_position,
 									direction = .South,
 								})
@@ -111,7 +111,7 @@ water_bake :: proc(cell: Cell, origin: [2]i8) -> map[[2]i8]TileValue {// [dynami
 							case bot.value == .Empty && top.value == .Empty:
 								path.should_skip = true
 								skips += 1
-								append(&paths_to_execute, WaterPath {
+								append(&paths_to_execute, Water_Path {
 									origin = top.relative_position,
 									direction = .South,
 								})
@@ -138,11 +138,11 @@ water_bake :: proc(cell: Cell, origin: [2]i8) -> map[[2]i8]TileValue {// [dynami
 								} else {
 								}
 							case .Wall:
-								left_path := WaterPath {
+								left_path := Water_Path {
 									origin = tile.relative_position,
 									direction = .West,
 								}
-								right_path := WaterPath {
+								right_path := Water_Path {
 									origin = tile.relative_position,
 									direction = .East,
 								}

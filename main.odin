@@ -41,7 +41,7 @@ main :: proc() {
 // }
 	a := read_room(.A)
 	mouse_pos: [2]f32
-	map_a := CursorRoom {room_ptr = &a, rotation = 1}
+	map_a := Cursor_Room {room_ptr = &a, rotation = 1}
 
 	rl.InitWindow(1600,900,"rooms")
 
@@ -57,7 +57,7 @@ main :: proc() {
 		// Draw
 		rl.BeginDrawing()
 		rl.ClearBackground({100,20,30,255})
-		draw_room(map_a, mouse_pos)
+		draw_cursor_room(map_a, mouse_pos)
 		rl.EndDrawing()
 	}
 

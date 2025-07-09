@@ -8,7 +8,7 @@ import sa "core:container/small_array"
 
 
 
-read_room :: proc(tag: RoomTag) -> Room {
+read_room :: proc(tag: Room_Tag) -> Room {
 	filename := room_tag_as_filepath(tag, .CSV)
 	r: csv.Reader
 	r.trim_leading_space  = true
@@ -49,7 +49,7 @@ read_room :: proc(tag: RoomTag) -> Room {
 			current_cell := &rooms[x][y]
 			current_cell.relative_position = {x,y}
 			if field, ok := strconv.parse_uint(f); ok {
-				current_cell.tiles[iy][ix] = Tile{ value = TileValue(field), relative_position = {ix,iy}}
+				current_cell.tiles[iy][ix] = Tile{ value = Tile_Value(field), relative_position = {ix,iy}}
 			}
 		}
 	}
@@ -65,7 +65,7 @@ read_room :: proc(tag: RoomTag) -> Room {
 	return  Room {cells=cell_array, tag = tag}
 }
 
-room_tag_as_filepath :: proc(tag: RoomTag, extension: enum{CSV, PNG}) -> string {
+room_tag_as_filepath :: proc(tag: Room_Tag, extension: enum{CSV, PNG}) -> string {
 	switch extension {
 		case .CSV:
 			return fmt.tprintf("%v.csv", tag)
