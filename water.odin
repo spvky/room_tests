@@ -1,6 +1,7 @@
 package main
 
 import "core:fmt"
+import "core:math"
 import sa "core:container/small_array"
 
 Water_Path :: struct {
@@ -19,10 +20,10 @@ Water_Boundary_Pair :: struct {
 	initialized: bool
 }
 
-// To determine water height:
-	// -- Find wall endpoints with the same y value
-	// -- For each pair, look upwards until limit/one side finds a non solid tile, endpoint to height is submerged
-	// -- Boxes float to match height of water
+Water_Volume :: struct {
+	min: [2]i8,
+	max: [2]i8,
+}
 
 water_volumes_from_end_points_pairs :: proc(cell: Cell, endpoints: [dynamic]Water_Endpoint) {
 	pairs := make([dynamic]Water_Boundary_Pair,0,8)
@@ -41,8 +42,37 @@ water_volumes_from_end_points_pairs :: proc(cell: Cell, endpoints: [dynamic]Wate
 		}
 	}
 
+	water_volumes := make([dynamic]Water_Volume, 0, 8)
+
 	for pair in pairs {
-		
+		volume: Water_Volume
+
+		volume.max.y = pair.endpoints[0].position.y
+		volume.max.x = math.max(pair.endpoints[0].position.x, pair.endpoints[1].position.x) - 1
+		volume.max.x = math.min(pair.endpoints[0].position.x, pair.endpoints[1].position.x) + 1
+
+		limit := 4
+		height: i8
+
+		i0 := tile_make_iter_ray(cell, pair.endpoints[0].position, .North)
+		i1 := tile_make_iter_ray(cell, pair.endpoints[1].position, .North)
+		outer_loop: for i in 0..<limit {
+			for t in iter_tiles(&i0) {
+				#partial switch t.value {
+					case .Empty:
+						break outer_loop
+				}
+			}
+			for t in iter_tiles(&i1) {
+				#partial switch t.value {
+					case .Empty:
+						break outer_loop
+				}
+				height = t.relative_position.y
+			}
+		}
+		volume.min.y = height
+		append(&water_volumes, volume)
 	}
 }
 
