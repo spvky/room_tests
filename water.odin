@@ -24,20 +24,27 @@ Water_Boundary_Pair :: struct {
 	// -- For each pair, look upwards until limit/one side finds a non solid tile, endpoint to height is submerged
 	// -- Boxes float to match height of water
 
-// water_volumes_from_end_points_pairs :: proc(cell: Cell, endpoints: [dynamic]WaterEndpoint) {
-// 	pairs: [dynamic]WaterBoundaryPair
+water_volumes_from_end_points_pairs :: proc(cell: Cell, endpoints: [dynamic]Water_Endpoint) {
+	pairs := make([dynamic]Water_Boundary_Pair,0,8)
+	open_pair: Water_Boundary_Pair
 
-// 	open_pair: WaterBoundaryPair
+	for we in endpoints {
+		if !open_pair.initialized {
+			open_pair.endpoints[0] = we
+			open_pair.initialized = true
+		} else {
+			if we.position.y == open_pair.endpoints[0].position.y {
+				open_pair.endpoints[1] = we
+				append(&pairs, open_pair)
+				open_pair = Water_Boundary_Pair {}
+			}
+		}
+	}
 
-// 	for we in endpoints {
-// 		if !open_pair.initialized {
-// 			open_pair.endpoints[0] = we
-// 			open_pair.initialized = true
-// 		} else {
-// 			if we.position.y == 
-// 		}
-// 	}
-// }
+	for pair in pairs {
+		
+	}
+}
 
 water_bake :: proc(cell: Cell, origin: [2]i8) -> map[[2]i8]Tile_Value {// [dynamic]WaterEndpoint {
 	still_baking := true
