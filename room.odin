@@ -1,6 +1,5 @@
 package main
 
-import rl "vendor:raylib"
 import sa "core:container/small_array"
 
 Room :: struct {
