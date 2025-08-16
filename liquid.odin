@@ -27,4 +27,6 @@ package main
 // -- add cell tiles to global map
 // -- first baking step: liquid resolution
 // -- second baking step: set camera anchors
-complete_liquid_path()
+
+calculate_map_bounding_box :: proc() {
+}
